@@ -42,4 +42,29 @@ product_num = pd.DataFrame(product_num, columns=['product_num']).reset_index()
 print(product_num)
 #--------------------------------------------------------------------------#
 #--------------------------------------------------------------------------#
+#预测下次购买时间
+def f2(arr):
+    linreg = LinearRegression()
+    linreg.fit(arr['order_number'].values.reshape(-1,1), arr['days_since_prior_order'].values.reshape(-1,1))
+    order_num = arr['order_number'].values
+    y = linreg.predict(order_num[-1]+1)
+    return round(y[0][0])
+
+proir = pd.read_csv('../result/merged_prior.csv')
+prior = proir[['user_id', 'order_number', 'days_since_prior_order']].dropna()
+
+prior = prior.drop_duplicates().reset_index(drop=True)
+predict_day_gap = prior.groupby('user_id').apply(f2)
+predict_day_gap = pd.DataFrame(predict_day_gap, columns=['predict_day_gap']).reset_index()
+
+train = pd.read_csv('../data/orders.csv')
+train = train[train['eval_set']=='train']
+train = train[['user_id', 'days_since_prior_order']].reset_index(drop=True)
+
+predict_day_gap = pd.merge(predict_day_gap, train)
+predict_day_gap['dif'] = abs(predict_day_gap['predict_day_gap']-predict_day_gap['days_since_prior_order'])
+print(predict_day_gap)
+print(len(predict_day_gap[predict_day_gap['dif']<5]) / len(predict_day_gap))
+#--------------------------------------------------------------------------#
+#--------------------------------------------------------------------------#
 #
