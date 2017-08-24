@@ -43,7 +43,7 @@ last_order_gap['last_order_gap'] = last_order_gap['max_order_num'] - last_order_
 last_order_gap = last_order_gap.drop(['max_order_num'], axis=1)
 features = pd.merge(features, last_order_gap, sort=False)
 
-
+print(len(features['user_id'].value_counts()))
 #--------------------------------------------------------------------------#
 #--------------------------------------------------------------------------#
 #创建features：总销量和再次购买销量
@@ -51,8 +51,8 @@ order_products_prior = pd.read_csv('../data/order_products__prior.csv')
 total_sale = order_products_prior['product_id'].value_counts()
 total_sale = pd.DataFrame({'product_id':total_sale.index, 'total_sale':total_sale.values}, index=range(len(total_sale)))
 
-order_products_prior = order_products_prior[order_products_prior['reordered']==1]
-rebuy_total_sale = order_products_prior['product_id'].value_counts()
+order_products_prior_tmp = order_products_prior[order_products_prior['reordered']==1]
+rebuy_total_sale = order_products_prior_tmp['product_id'].value_counts()
 rebuy_total_sale = pd.DataFrame({'product_id':rebuy_total_sale.index, 'rebuy_total_sale':rebuy_total_sale.values},\
                                 index=range(len(rebuy_total_sale)))
 
@@ -84,6 +84,7 @@ add_to_cart_ratio_average = tmp.groupby(['user_id','product_id'])['add_to_cart_r
 features = pd.merge(features, add_to_cart_ratio_average)
 features = pd.merge(features, max_order_num_average)
 
+print(len(features['user_id'].value_counts()))
 #--------------------------------------------------------------------------#
 #--------------------------------------------------------------------------#
 #features：rebuy_aisle_ratio、rebuy_depertment_ratio
@@ -117,6 +118,63 @@ aisle_department_feature = aisle_department_feature[['product_id', 'rebuy_aisle_
 
 features = pd.merge(features, aisle_department_feature)
 
+print(len(features['user_id'].value_counts()))
+#--------------------------------------------------------------------------#
+#--------------------------------------------------------------------------#
+#创建features：order_hour_dif、order_dow_dif_sum
+orders = pd.read_csv('../data/orders.csv')
+
+def f3(arr):
+    train_case = arr[arr['eval_set']=='train']
+    arr['target_interval'] = train_case['order_hour_interval'].iloc[0]
+    arr['target_order_dow'] = train_case['order_dow'].iloc[0]
+    return arr
+
+def f4(x):
+    if(x==19 or x==1):
+        x = 0.7
+    elif(x==18 or x==2):
+        x = 0.3
+    elif(x==0):
+        x=1
+    else:
+        x = 0
+    return x
+
+def f5(x):
+    if x==0:
+        x = 1
+    elif x==1 or x==6:
+        x = 0.3
+    else:
+        x = 0
+    return x
+
+test = orders[orders['eval_set'] == 'test']
+other = ~orders['user_id'].isin(test['user_id'])
+prior_train = orders[other]
+prior_train['order_hour_interval'] = prior_train['order_hour_of_day'].map({\
+    # 0:1,1:1,2:1,3:1,4:1,5:1,6:1,7:1,8:2,9:2,10:3,11:3,12:4,13:4,14:5,15:5,16:5,17:6,18:6,19:7,20:7,21:8,22:8,23:8})
+    7:7,6:7,5:6,4:6,3:5,2:5,1:4,0:4,8:8,9:9,10:10,11:11,12:12,13:13,14:14,15:15,16:16,17:17,18:18,19:19,20:20,21:21,22:22,23:23})
+prior_train = prior_train.groupby('user_id').apply(f3)
+prior_train['order_hour_dif'] = abs(prior_train['target_interval'] - prior_train['order_hour_interval'])
+prior_train = prior_train.drop(['order_hour_interval', 'target_interval', 'order_hour_of_day'], axis=1)
+prior_train['order_hour_dif'] = prior_train['order_hour_dif'].apply(f4)
+
+prior_train['order_dow_dif'] = abs(prior_train['target_order_dow'] - prior_train['order_dow'])
+prior_train = prior_train.drop(['target_order_dow','order_dow'], axis=1)
+prior_train['order_dow_dif'] = prior_train['order_dow_dif'].apply(f5)
+
+prior_train = pd.merge(prior_train, order_products_prior[['order_id','product_id']])
+order_hour_dif_sum = prior_train.groupby(['user_id', 'product_id'])['order_hour_dif'].sum().reset_index().\
+    rename(columns={'order_hour_dif':'order_hour_dif_sum'})
+order_dow_dif_sum = prior_train.groupby(['user_id', 'product_id'])['order_dow_dif'].sum().reset_index().\
+    rename(columns={'order_dow_dif':'order_dow_dif_sum'})
+
+hour_dow = pd.merge(order_hour_dif_sum, order_dow_dif_sum)
+features = pd.merge(features, hour_dow)
+
 features = features.sort_values(by=['user_id', 'product_id'])
 features.to_csv('../result/features.csv', index=False)
 
+print(len(features['user_id'].value_counts()))

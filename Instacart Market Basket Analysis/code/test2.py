@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
+pd.set_option('display.width', 320)
 
-a = np.arange(1,10)*0.02+0.1
-print(a)
 
+products = pd.read_csv('../data/products.csv', nrows=1000)

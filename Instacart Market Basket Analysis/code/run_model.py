@@ -7,10 +7,10 @@ import numpy as np
 pd.set_option('display.width', 320)
 
 #loadTrainData():
-index = 416446
+index = 1048547
 features = pd.read_csv('../result/features.csv')
 data = features.iloc[:,4:]
-data = data.iloc[:,:8]
+# data = data.iloc[:,:10]
 
 min_max_scaler = preprocessing.MinMaxScaler()
 data = min_max_scaler.fit_transform(data)
@@ -23,8 +23,9 @@ train_labels = labels.iloc[index:]
 validate_labels = labels.iloc[:index]
 
 mean_f1 = []
-for i in range(1,10):
-    logreg = LogisticRegression(C=0.12+0.01*i)
+for i in range(10):
+
+    logreg = LogisticRegression(C=0.1+0.05*i)
     logreg.fit(train_data, train_labels)
     score = logreg.score(validate_data, validate_labels)
     print('score = ', score)
@@ -48,9 +49,10 @@ for i in range(1,10):
     f1 = pd.merge(f1, true_num)
     f1['f1'] = 2/(f1['predict_num']/f1['TP'] + f1['true_num']/f1['TP'])
     mean_f1.append(f1['f1'].sum()/len(f1['f1']))
+
 print(mean_f1)
 plt.figure()
-plt.plot(np.arange(1,10)*0.01+0.13, mean_f1)
+plt.plot(np.arange(10)*0.05+0.1, mean_f1)
 plt.show()
 
 

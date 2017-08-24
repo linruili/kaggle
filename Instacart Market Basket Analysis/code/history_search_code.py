@@ -5,6 +5,18 @@ import math
 pd.set_option('display.width', 320)
 
 #--------------------------------------------------------------------------#
+#--------------------------------------------------------------------------#
+#把test的prior的数据拿来作训练
+merged_prior_test = pd.read_csv('../result/merged_prior_test.csv')
+train_2 = merged_prior_test[merged_prior_test['max_order_num'] == merged_prior_test['order_number']]
+train_2 = train_2[['user_id', 'order_id', 'product_id', 'add_to_cart_order', 'reordered']]
+
+merged_prior_2 = merged_prior_test[merged_prior_test['max_order_num'] != merged_prior_test['order_number']]
+train_2.to_csv('../result/train_2.csv', index=False)
+merged_prior_2.to_csv('../result/merged_prior_2.csv', index=False)
+print(train_2)
+#--------------------------------------------------------------------------#
+#--------------------------------------------------------------------------#
 #统计在train里，但之前只购买过一次的商品，是在倒数第几次购物购买的
 train = pd.read_csv('../result/train.csv')
 features = pd.read_csv('../result/features.csv')
@@ -67,4 +79,15 @@ print(predict_day_gap)
 print(len(predict_day_gap[predict_day_gap['dif']<5]) / len(predict_day_gap))
 #--------------------------------------------------------------------------#
 #--------------------------------------------------------------------------#
-#
+#创造小样本给2nd
+orders = pd.read_csv('../input/orders.csv', nrows=99998)
+order_products__prior = pd.read_csv('../input/order_products__prior.csv')
+order_products__train = pd.read_csv('../input/order_products__train.csv')
+
+order_products__prior = order_products__prior[order_products__prior['order_id'].isin(orders['order_id'])]
+order_products__train = order_products__train[order_products__train['order_id'].isin(orders['order_id'])]
+
+# print(order_products__train)
+orders.to_csv('../input/orders.csv', index=False)
+order_products__train.to_csv('../input/order_products__train.csv', index=False)
+order_products__prior.to_csv('../input/order_products__prior.csv', index=False)
